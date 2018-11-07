@@ -34,6 +34,7 @@ const embarkJson = require(path.join(dappPath, 'embark.json'));
 const embarkPipeline = require(path.join(dappPath, '.embark/embark-pipeline.json'));
 
 const buildDir = path.join(dappPath, embarkJson.buildDir);
+const pathToElm = path.resolve(path.join(dappNodeModules, '.bin', 'elm'));
 
 // it's important to `embark reset` if a pkg version is specified in
 // embark.json and changed/removed later, otherwise pkg resolution may behave
@@ -86,6 +87,7 @@ const base = {
   context: dappPath,
   entry: entry,
   module: {
+    noParse: /\.elm$/,
     rules: [
       {
         test: /\.scss$/,
@@ -156,6 +158,14 @@ const base = {
               }
             ]
           ].map(resolve)
+        }
+      },
+      {
+        test: /\.elm$/,
+        exclude: [/elm-stuff/, /node_modules/],
+        loader: 'elm-webpack-loader',
+        options: {
+          pathToElm: pathToElm
         }
       }
     ]
@@ -233,6 +243,16 @@ if (isFlowEnabled && isTypeScriptEnabled) {
   throw new Error('isFlowEnabled and isTypeScriptEnabled cannot both be true');
 }
 
+// Elm
+// -----------------------------------------------------------------------------
+base.resolve.extensions = [
+  // webpack defaults
+  // see: https://webpack.js.org/configuration/resolve/#resolve-extensions
+  '.wasm', '.mjs', '.js', '.json',
+  // elm extension
+  '.elm'
+];
+
 // development config
 // -----------------------------------------------------------------------------
 
@@ -249,6 +269,10 @@ devBabelLoader.options.compact = false;
 const devPresetReact = devBabelLoader.options.presets[1];
 const devPresetReactOptions = devPresetReact[1];
 devPresetReactOptions.development = true;
+// enable debug mode for Elm
+const devElmLoader = development.module.rules[4];
+devElmLoader.options.debug = true;
+
 
 // production config
 // -----------------------------------------------------------------------------
